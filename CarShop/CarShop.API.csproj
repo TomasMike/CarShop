@@ -20,7 +20,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Migrations\" />
+    <ProjectReference Include="..\CarShop.Core\CarShop.Core.csproj" />
+    <ProjectReference Include="..\CarShop.Infrastructure\CarShop.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
