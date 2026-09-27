@@ -12,13 +12,9 @@ public partial class Program
         AppDomain.CurrentDomain.SetData("DataDirectory", AppContext.BaseDirectory);
         var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-        builder.Services.AddDbContext<AppDbContext>(options =>
-            options.UseSqlite(connectionString));
-
-        builder.Services.AddIdentityApiEndpoints<IdentityUser>()
-            .AddEntityFrameworkStores<AppDbContext>();
-
         builder.Services.AddControllers();
+        builder.Services.AddEndpointsApiExplorer();
+
         builder.Services.AddSwaggerGen(options =>
         {
             options.SwaggerDoc("v1", new()
@@ -32,7 +28,6 @@ public partial class Program
             var xmlPath = System.IO.Path.Combine(AppContext.BaseDirectory, xmlFile);
             options.IncludeXmlComments(xmlPath);
 
-            // 1. Zadefinujeme schému pre Bearer autentifikáciu
             options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
             {
                 Name = "Authorization",
@@ -43,15 +38,17 @@ public partial class Program
                 BearerFormat = "JWT"
             });
 
-            // 2. Použijeme novú syntax pre najnovšie knižnice (odstraňuje chybu chýbajúceho 'Reference')
             options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
             {
-                // Využíva nový objekt OpenApiSecuritySchemeReference naviazaný na konkrétny dokument
                 [new OpenApiSecuritySchemeReference("Bearer", document)] = []
             });
-
-
         });
+
+        builder.Services.AddDbContext<AppDbContext>(options =>
+           options.UseSqlite(connectionString));
+
+        builder.Services.AddIdentityApiEndpoints<IdentityUser>()
+          .AddEntityFrameworkStores<AppDbContext>();
 
         var app = builder.Build();
 
@@ -59,10 +56,7 @@ public partial class Program
         {
             var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-            if (context.Database.EnsureCreated())
-            {
-                context.Database.Migrate();
-            }
+            context.Database.Migrate();
         }
 
         if (app.Environment.IsDevelopment())
@@ -78,6 +72,26 @@ public partial class Program
         app.MapIdentityApi<IdentityUser>();
         app.UseHttpsRedirection();
         app.MapControllers();
+
+        app.Lifetime.ApplicationStarted.Register(() =>
+        {
+            var endpointDataSources = app.Services.GetServices<EndpointDataSource>();
+
+            foreach (var source in endpointDataSources)
+            {
+                foreach (var endpoint in source.Endpoints)
+                {
+                    // Vytiahneme informácie o routovaní (Route Pattern)
+                    if (endpoint is RouteEndpoint routeEndpoint)
+                    {
+                        var httpMethods = endpoint.Metadata.GetMetadata<IHttpMethodMetadata>()?.HttpMethods;
+                        var methods = httpMethods != null ? string.Join(", ", httpMethods) : "ANY";
+
+                        Console.WriteLine($"[{methods}] {routeEndpoint.RoutePattern.RawText}");
+                    }
+                }
+            }
+        });
 
         app.Run();
     }
