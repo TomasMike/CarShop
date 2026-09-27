@@ -1,6 +1,7 @@
 using CarShop.Context;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi;
 
 public partial class Program
 {
@@ -14,11 +15,43 @@ public partial class Program
         builder.Services.AddDbContext<AppDbContext>(options =>
             options.UseSqlite(connectionString));
 
-        // 2. Add Identity Services and API Endpoints
         builder.Services.AddIdentityApiEndpoints<IdentityUser>()
             .AddEntityFrameworkStores<AppDbContext>();
 
         builder.Services.AddControllers();
+        builder.Services.AddSwaggerGen(options =>
+        {
+            options.SwaggerDoc("v1", new()
+            {
+                Title = "CarShop API",
+                Version = "v1",
+                Description = "REST API pre správu a rezerváciu vozidiel v autosalóne."
+            });
+
+            var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+            var xmlPath = System.IO.Path.Combine(AppContext.BaseDirectory, xmlFile);
+            options.IncludeXmlComments(xmlPath);
+
+            // 1. Zadefinujeme schému pre Bearer autentifikáciu
+            options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+            {
+                Name = "Authorization",
+                Description = "Zadaj JWT token v tvare: Bearer [tvoj_token]",
+                In = ParameterLocation.Header,
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+                BearerFormat = "JWT"
+            });
+
+            // 2. Použijeme novú syntax pre najnovšie knižnice (odstraňuje chybu chýbajúceho 'Reference')
+            options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+            {
+                // Využíva nový objekt OpenApiSecuritySchemeReference naviazaný na konkrétny dokument
+                [new OpenApiSecuritySchemeReference("Bearer", document)] = []
+            });
+
+
+        });
 
         var app = builder.Build();
 
@@ -32,22 +65,20 @@ public partial class Program
             }
         }
 
-        // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
         {
-            // app.MapOpenApi();
+            app.UseSwagger();
+            app.UseSwaggerUI(options =>
+            {
+                options.SwaggerEndpoint("/swagger/v1/swagger.json", "CarShop API v1");
+                options.RoutePrefix = "swagger";
+            });
         }
 
         app.MapIdentityApi<IdentityUser>();
         app.UseHttpsRedirection();
         app.MapControllers();
 
-
         app.Run();
     }
-}
-
-internal record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
 }
