@@ -1,5 +1,5 @@
 <Solution>
+  <Project Path="CarShop.API/CarShop.API.csproj" />
   <Project Path="CarShop.Core/CarShop.Core.csproj" Id="57bcf34e-eb0b-4e7f-9f5a-e746d3c2e6fc" />
   <Project Path="CarShop.Infrastructure/CarShop.Infrastructure.csproj" Id="603d0ed2-8484-47c4-b820-bfbff06ddbb1" />
-  <Project Path="CarShop/CarShop.API.csproj" />
 </Solution>
