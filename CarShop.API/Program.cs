@@ -58,7 +58,7 @@ public partial class Program
 
             context.Database.Migrate();
         }
-
+        
         if (app.Environment.IsDevelopment())
         {
             app.UseSwagger();
@@ -69,29 +69,38 @@ public partial class Program
             });
         }
 
-        app.MapIdentityApi<IdentityUser>();
-        app.UseHttpsRedirection();
-        app.MapControllers();
-
-        app.Lifetime.ApplicationStarted.Register(() =>
+        app.MapIdentityApi<IdentityUser>().AddEndpointFilter(async (context, next) =>
         {
-            var endpointDataSources = app.Services.GetServices<EndpointDataSource>();
+            var restult = await next(context);
 
-            foreach (var source in endpointDataSources)
+            if (context.HttpContext.Request.Path.Value?.EndsWith("/register") == true 
+                && context.HttpContext.Response.StatusCode == StatusCodes.Status200OK)
             {
-                foreach (var endpoint in source.Endpoints)
-                {
-                    // Vytiahneme informácie o routovaní (Route Pattern)
-                    if (endpoint is RouteEndpoint routeEndpoint)
-                    {
-                        var httpMethods = endpoint.Metadata.GetMetadata<IHttpMethodMetadata>()?.HttpMethods;
-                        var methods = httpMethods != null ? string.Join(", ", httpMethods) : "ANY";
+                var userManager = context.HttpContext.RequestServices.GetRequiredService<UserManager<IdentityUser>>();
 
-                        Console.WriteLine($"[{methods}] {routeEndpoint.RoutePattern.RawText}");
+                context.HttpContext.Request.EnableBuffering();
+                context.HttpContext.Request.Body.Position = 0;
+                using var reader = new StreamReader(context.HttpContext.Request.Body);
+                var body = await reader.ReadToEndAsync();
+
+                var email = System.Text.Json.JsonDocument.Parse(body).RootElement.GetProperty("email").GetString();
+
+                if (!string.IsNullOrEmpty(email))
+                {
+                    var user = await userManager.FindByEmailAsync(email);
+                    if (user != null)
+                    {
+                        // Automaticky priradíme rolu "Customer"
+                        await userManager.AddToRoleAsync(user, "Customer");
                     }
                 }
             }
+
+                return restult;
         });
+        app.UseHttpsRedirection();
+        app.MapControllers();
+
 
         app.Run();
     }
