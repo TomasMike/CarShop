@@ -1,13 +1,15 @@
+using System.Threading.Tasks;
 using CarShop.Context;
 using CarShop.Models;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 using System.Reflection.Metadata;
 
 public partial class Program
 {
-    private static void Main(string[] args)
+    private static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
 
@@ -47,26 +49,10 @@ public partial class Program
         });
 
         builder.Services.AddDbContext<AppDbContext>(options =>
-           options.UseSqlite(connectionString)
-           .UseSeeding((context, _) =>
-           {
-               var appCtx = (AppDbContext)context;
-               if (!appCtx.Cars.Any())
-               {
-                   var toyota = new CarBrand { Id = 1, Name = "Toyota" };
-                   var tesla = new CarBrand { Id = 2, Name = "Tesla" };
-
-                   appCtx.Cars.AddRange(
-                       new Car { CarBrand = toyota, Model = "RAV4", Year = 2023, Price = 32500m, Color = "Gray", IsAvailable = true },
-                       new Car { CarBrand = tesla, Model = "Model 3", Year = 2024, Price = 39990m, Color = "White", IsAvailable = true }
-                   );
-
-                   appCtx.SaveChanges();
-               }
-           }))
-           ;
+           options.UseSqlite(connectionString));
 
         builder.Services.AddIdentityApiEndpoints<IdentityUser>()
+          .AddRoles<IdentityRole>()
           .AddEntityFrameworkStores<AppDbContext>();
 
         var app = builder.Build();
@@ -74,8 +60,31 @@ public partial class Program
         using (var scope = app.Services.CreateScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+            await context.Database.MigrateAsync();
 
-            context.Database.Migrate();
+            // Seed cars
+            if (!context.Cars.Any())
+            {
+                var toyota = new CarBrand { Id = 1, Name = "Toyota" };
+                var tesla = new CarBrand { Id = 2, Name = "Tesla" };
+
+                context.Cars.AddRange(
+                    new Car { CarBrand = toyota, Model = "RAV4", Year = 2023, Price = 32500m, Color = "Gray", IsAvailable = true },
+                    new Car { CarBrand = tesla, Model = "Model 3", Year = 2024, Price = 39990m, Color = "White", IsAvailable = true }
+                );
+
+                await context.SaveChangesAsync();
+            }
+
+
+
+            var roleExists = await roleManager.RoleExistsAsync("Customer");
+            if (!roleExists)
+            {
+                await roleManager.CreateAsync(new IdentityRole("Customer"));
+            }
+
         }
         
         if (app.Environment.IsDevelopment())
@@ -92,34 +101,19 @@ public partial class Program
         //add customer role to new registered users
         app.MapIdentityApi<IdentityUser>().AddEndpointFilter(async (context, next) =>
         {
-            var restult = await next(context);
+            var request = context.Arguments.OfType<RegisterRequest>().FirstOrDefault();
 
-            if (context.HttpContext.Request.Path.Value?.EndsWith("/register") == true 
-                && context.HttpContext.Response.StatusCode == StatusCodes.Status200OK)
+            var result = await next(context);
+
+            if (request is not null && context.HttpContext.Response.StatusCode == StatusCodes.Status200OK)
             {
                 var userManager = context.HttpContext.RequestServices.GetRequiredService<UserManager<IdentityUser>>();
-
-                context.HttpContext.Request.EnableBuffering();
-                context.HttpContext.Request.Body.Position = 0;
-                using var reader = new StreamReader(context.HttpContext.Request.Body);
-                var body = await reader.ReadToEndAsync();
-
-                context.HttpContext.Request.Body.Position = 0;
-
-                var email = System.Text.Json.JsonDocument.Parse(body).RootElement.GetProperty("email").GetString();
-
-                if (!string.IsNullOrEmpty(email))
-                {
-                    var user = await userManager.FindByEmailAsync(email);
-                    if (user != null)
-                    {
-                        // Automaticky priradíme rolu "Customer"
-                        await userManager.AddToRoleAsync(user, "Customer");
-                    }
-                }
+                var user = await userManager.FindByEmailAsync(request.Email);
+                if (user != null)
+                    await userManager.AddToRoleAsync(user, "Customer");
             }
 
-                return restult;
+            return result;
         });
         app.UseHttpsRedirection();
         app.MapControllers();
