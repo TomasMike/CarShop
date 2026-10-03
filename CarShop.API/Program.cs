@@ -1,7 +1,9 @@
 using CarShop.Context;
+using CarShop.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
+using System.Reflection.Metadata;
 
 public partial class Program
 {
@@ -45,7 +47,24 @@ public partial class Program
         });
 
         builder.Services.AddDbContext<AppDbContext>(options =>
-           options.UseSqlite(connectionString));
+           options.UseSqlite(connectionString)
+           .UseSeeding((context, _) =>
+           {
+               var appCtx = (AppDbContext)context;
+               if (!appCtx.Cars.Any())
+               {
+                   var toyota = new CarBrand { Id = 1, Name = "Toyota" };
+                   var tesla = new CarBrand { Id = 2, Name = "Tesla" };
+
+                   appCtx.Cars.AddRange(
+                       new Car { CarBrand = toyota, Model = "RAV4", Year = 2023, Price = 32500m, Color = "Gray", IsAvailable = true },
+                       new Car { CarBrand = tesla, Model = "Model 3", Year = 2024, Price = 39990m, Color = "White", IsAvailable = true }
+                   );
+
+                   appCtx.SaveChanges();
+               }
+           }))
+           ;
 
         builder.Services.AddIdentityApiEndpoints<IdentityUser>()
           .AddEntityFrameworkStores<AppDbContext>();
@@ -69,6 +88,8 @@ public partial class Program
             });
         }
 
+
+        //add customer role to new registered users
         app.MapIdentityApi<IdentityUser>().AddEndpointFilter(async (context, next) =>
         {
             var restult = await next(context);
@@ -82,6 +103,8 @@ public partial class Program
                 context.HttpContext.Request.Body.Position = 0;
                 using var reader = new StreamReader(context.HttpContext.Request.Body);
                 var body = await reader.ReadToEndAsync();
+
+                context.HttpContext.Request.Body.Position = 0;
 
                 var email = System.Text.Json.JsonDocument.Parse(body).RootElement.GetProperty("email").GetString();
 
