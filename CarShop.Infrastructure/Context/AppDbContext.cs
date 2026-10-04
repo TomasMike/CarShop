@@ -5,6 +5,8 @@ using CarShop.Models;
 
 namespace CarShop.Context
 {
+    //dotnet ef database update  --project CarShop.Infrastructure --startup-project Carshop.API.
+    //dotnet ef migrations add ExpandCar  --project CarShop.Infrastructure --startup-project Carshop.API
     public class AppDbContext : IdentityDbContext<
         IdentityUser,                        // TUser
         IdentityRole,                        // TRole
@@ -20,6 +22,27 @@ namespace CarShop.Context
 
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         {
+        }
+
+        protected override void OnModelCreating(ModelBuilder builder)
+        {
+            base.OnModelCreating(builder);
+
+            builder.Entity<IdentityRole>().HasData(new IdentityRole
+            {
+                Id = "customer-role-id",
+                Name = "Customer",
+                NormalizedName = "CUSTOMER",
+                ConcurrencyStamp = "aa55be3f-92a5-441a-917f-d28108a10ff4"
+            });
+
+            builder.Entity<IdentityRole>().HasData(new IdentityRole
+            {
+                Id = "admin-role-id",
+                Name = "Admin",
+                NormalizedName = "ADMIN",
+                ConcurrencyStamp = "78f6f0fc-bf65-4e5b-9267-477ce7df7adc"
+            });
         }
     }
 }

@@ -76,15 +76,6 @@ public partial class Program
 
                 await context.SaveChangesAsync();
             }
-
-
-
-            var roleExists = await roleManager.RoleExistsAsync("Customer");
-            if (!roleExists)
-            {
-                await roleManager.CreateAsync(new IdentityRole("Customer"));
-            }
-
         }
         
         if (app.Environment.IsDevelopment())
