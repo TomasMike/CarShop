@@ -1,11 +1,11 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using CarShop.Models;
+using CarShop.Core.Models;
 
 namespace CarShop.Context
 {
-    //dotnet ef database update  --project CarShop.Infrastructure --startup-project Carshop.API.
+    //dotnet ef database update  --project CarShop.Infrastructure --startup-project Carshop.API
     //dotnet ef migrations add ExpandCar  --project CarShop.Infrastructure --startup-project Carshop.API
     public class AppDbContext : IdentityDbContext<
         IdentityUser,                        // TUser
@@ -19,6 +19,9 @@ namespace CarShop.Context
     {
         public DbSet<Car> Cars => Set<Car>();
         public DbSet<CarBrand> CarBrands => Set<CarBrand>();
+        public DbSet<Order> Orders => Set<Order>();
+        public DbSet<Payment> Payments => Set<Payment>();
+        public DbSet<Customer> Customers => Set<Customer>();
 
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         {

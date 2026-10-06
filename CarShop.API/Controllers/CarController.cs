@@ -1,5 +1,5 @@
 ﻿using CarShop.Context;
-using CarShop.Models;
+using CarShop.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;

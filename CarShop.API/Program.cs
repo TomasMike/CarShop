@@ -1,11 +1,12 @@
-using System.Threading.Tasks;
 using CarShop.Context;
-using CarShop.Models;
+using CarShop.Core.Services;
+using CarShop.Core.Models;
+using CarShop.Core.Repositories;
+using CarShop.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
-using System.Reflection.Metadata;
 
 public partial class Program
 {
@@ -50,6 +51,16 @@ public partial class Program
 
         builder.Services.AddDbContext<AppDbContext>(options =>
            options.UseSqlite(connectionString));
+
+        // Register repositories
+        builder.Services.AddScoped<ICarRepository, CarRepository>();
+        builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+        builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+        builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
+
+        // Register services
+        builder.Services.AddScoped<IOrderService, OrderService>();
+        builder.Services.AddScoped<IPaymentService, PaymentService>();
 
         builder.Services.AddIdentityApiEndpoints<IdentityUser>()
           .AddRoles<IdentityRole>()

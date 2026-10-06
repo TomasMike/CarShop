@@ -1,4 +1,4 @@
-﻿namespace CarShop.Models
+﻿namespace CarShop.Core.Models
 {
     public class Car
     {
@@ -10,10 +10,9 @@
         public required bool IsAvailable { get; set; }
         public required string Color { get; set; }
     }
-
-    public class CarBrand
-    {
-        public required int Id { get; set; }
-        public required string Name { get; set; }
-    }
 }
+
+
+    
+
+   
