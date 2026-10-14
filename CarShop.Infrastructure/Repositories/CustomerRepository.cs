@@ -21,6 +21,18 @@ namespace CarShop.Infrastructure.Repositories
                 .FirstOrDefaultAsync(c => c.Id == id);
         }
 
+        public async Task<Customer?> GetByUserIdAsync(string userId)
+        {
+            return await _context.Customers
+                .FirstOrDefaultAsync(c => c.UserId == userId);
+        }
+
+        public async Task<Customer?> GetByEmailAsync(string email)
+        {
+            return await _context.Customers
+                .FirstOrDefaultAsync(c => c.Email == email);
+        }
+
         public async Task<IEnumerable<Customer>> GetAllAsync()
         {
             return await _context.Customers
@@ -50,5 +62,7 @@ namespace CarShop.Infrastructure.Repositories
                 await _context.SaveChangesAsync();
             }
         }
+
+     
     }
 }

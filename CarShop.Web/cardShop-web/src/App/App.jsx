@@ -1,17 +1,27 @@
 import './App.css';
+import { useState } from 'react';
 import { CarsDashboard } from '../CarDashboard/CarsDashboard';
 import { LoginPanel, responseError } from '../LoginPanel/LoginPanel';
 
-function App()
-{
+function App() {
+    const [pageState, setPageState] = useState('dashboard');
+    const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(sessionStorage.getItem('carshop.accessToken')));
+
+    const renderPage = () => {
+        switch (pageState) {
+            case 'dashboard':
+                return <CarsDashboard isAuthenticated={isAuthenticated} />;
+            default:
+                return <OrderList />;
+        }
+    };
+
     return (
         <div className="app-shell">
-            <LoginPanel />
-
+            <LoginPanel onAuthChange={setIsAuthenticated} />
 
             <div className="dashboard-section">
-               
-                <CarsDashboard />
+                {renderPage()}
             </div>
         </div>
     );

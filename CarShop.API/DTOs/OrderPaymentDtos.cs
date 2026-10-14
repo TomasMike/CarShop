@@ -1,9 +1,10 @@
+using CarShop.Core.Models;
+
 namespace CarShop.API.DTOs
 {
     public class CreateOrderRequest
     {
         public int CarId { get; set; }
-        public int CustomerId { get; set; }
     }
 
     public class OrderDto
@@ -14,6 +15,14 @@ namespace CarShop.API.DTOs
         public DateTime OrderDate { get; set; }
         public string Status { get; set; } = string.Empty;
         public decimal TotalPrice { get; set; }
+    }
+
+    public class  CustomerDto
+    {
+        public int Id { get; set; }
+        public  string UserId { get; set; } = string.Empty;
+        public  string Email { get; set; } = string.Empty;
+        public  string PhoneNumber { get; set; } = string.Empty;
     }
 
     public class ProcessPaymentRequest

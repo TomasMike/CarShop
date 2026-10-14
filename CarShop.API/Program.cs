@@ -61,6 +61,7 @@ public partial class Program
         // Register services
         builder.Services.AddScoped<IOrderService, OrderService>();
         builder.Services.AddScoped<IPaymentService, PaymentService>();
+        builder.Services.AddScoped<ICustomerService, CustomerService>();
 
         builder.Services.AddIdentityApiEndpoints<IdentityUser>()
           .AddRoles<IdentityRole>()
@@ -100,7 +101,7 @@ public partial class Program
         }
 
 
-        //add customer role to new registered users
+        //add customer role to new registered users and create customer record
         app.MapIdentityApi<IdentityUser>().AddEndpointFilter(async (context, next) =>
         {
             var request = context.Arguments.OfType<RegisterRequest>().FirstOrDefault();
@@ -110,9 +111,33 @@ public partial class Program
             if (request is not null && context.HttpContext.Response.StatusCode == StatusCodes.Status200OK)
             {
                 var userManager = context.HttpContext.RequestServices.GetRequiredService<UserManager<IdentityUser>>();
+                var customerService = context.HttpContext.RequestServices.GetRequiredService<ICustomerService>();
+
                 var user = await userManager.FindByEmailAsync(request.Email);
                 if (user != null)
+                {
+                    // Add Customer role
                     await userManager.AddToRoleAsync(user, "Customer");
+
+                    // Extract first and last name from email or use defaults
+                    var emailParts = request.Email.Split('@')[0].Split('.', StringSplitOptions.RemoveEmptyEntries);
+                    var firstName = emailParts.Length > 0 ? emailParts[0] : "Customer";
+                    var lastName = emailParts.Length > 1 ? emailParts[1] : user.Email?.Split('@')[0] ?? "User";
+
+                    // Create associated customer record
+                    try
+                    {
+                        await customerService.CreateCustomerAsync(
+                            user.Id,
+                            user.Email ?? request.Email,
+                            ""
+                        );
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        // Customer already exists, ignore
+                    }
+                }
             }
 
             return result;

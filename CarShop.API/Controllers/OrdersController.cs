@@ -1,31 +1,44 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 using CarShop.Core.Services;
 using CarShop.API.DTOs;
 
 namespace CarShop.API.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class OrdersController : ControllerBase
     {
         private readonly IOrderService _orderService;
+        private readonly ICustomerService _customerService;
 
-        public OrdersController(IOrderService orderService)
+        public OrdersController(IOrderService orderService, ICustomerService customerService)
         {
             _orderService = orderService;
+            _customerService = customerService;
         }
 
         /// <summary>
         /// Creates a new order for a car
         /// </summary>
-        /// <param name="request">Order creation request containing car ID and customer ID</param>
+        /// <param name="request">Order creation request containing the car ID</param>
         /// <returns>The created order</returns>
         [HttpPost]
         public async Task<ActionResult<OrderDto>> CreateOrder([FromBody] CreateOrderRequest request)
         {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+            if (userId == null)
+                return Unauthorized();
+
+            var customer = await _customerService.GetCustomerByUserIdAsync(userId);
+            if (customer == null)
+                return BadRequest(new { error = "No customer profile is associated with this account" });
+
             try
             {
-                var order = await _orderService.CreateOrderAsync(request.CarId, request.CustomerId);
+                var order = await _orderService.CreateOrderAsync(request.CarId, customer.Id);
                 var dto = MapToOrderDto(order);
                 return CreatedAtAction(nameof(GetOrder), new { id = order.Id }, dto);
             }

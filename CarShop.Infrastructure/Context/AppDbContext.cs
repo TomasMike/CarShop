@@ -31,6 +31,14 @@ namespace CarShop.Context
         {
             base.OnModelCreating(builder);
 
+            // Configure Customer-User relationship
+            builder.Entity<Customer>()
+                .HasKey(c => c.Id);
+
+            builder.Entity<Customer>()
+                .Property(c => c.UserId)
+                .IsRequired();
+
             builder.Entity<IdentityRole>().HasData(new IdentityRole
             {
                 Id = "customer-role-id",
